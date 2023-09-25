@@ -4,6 +4,11 @@ from obd import OBDCommand, commands
 
 REQUEST_ID = 0x7DF
 
+DTC_CATEGORY_POWER_TRAIN = 0x0
+DTC_CATEGORY_CHASIS = 0x1
+DTC_CATEGORY_BODY = 0x2
+DTC_CATEGORY_NETWORK = 0x3
+
 #https://www.csselectronics.com/pages/obd2-pid-table-on-board-diagnostics-j1979
 #cmd:obd.OBDCommand = obd.commands['SPEED']
 

@@ -18,6 +18,29 @@ class Task_Diagnostic_Control(engine.Task):
     
     @override
     def on_message_received(self, msg: Message):
+        if util.is_request(msg):
+            mode = msg.data[1]
+            # Show stored Diagnostic Trouble Codes
+            if mode == 0x03:
+                
+                dtc_category = 0x03
+                dtc_code = 0x3FFF #[0, 8191]
+                dtc_code = (dtc_category<<14)|dtc_code
+
+                code1 = list(int.to_bytes(dtc_code, 2, 'big'))
+                code2 = [0,0]
+                #code3 = [0,0]
+                #unused = [0,0]
+                NA = 0xAA
+                data = [
+                         4,
+                         (mode)+0x40,
+                         NA
+                        ] + code1 + code2 + [0]
+                        
+                # data = code1 + code2 + code3 + unused
+                self.send(0x7E8, data)
+
         if msg.arbitration_id == 0xD0C:
             self.send(0xD1C, msg.data)
 
