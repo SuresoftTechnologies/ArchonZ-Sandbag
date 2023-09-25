@@ -36,19 +36,20 @@ class Task_Throttle_Control(engine.Task):
     def on_message_received(self, msg: Message):
 
         if util.obd_util.is_request(msg):
-            length = msg.data[0]
-            mode = msg.data[1]
-            subfn = msg.data[2]
-            # ECU Reset
-            if mode == 0x11 and subfn == 0x01:
-                print('ECU RESET')
-                # send reset request
-                self.reset()
+            if len(msg.data) > 3:
+                length = msg.data[0]
+                mode = msg.data[1]
+                subfn = msg.data[2]
+                # ECU Reset
+                if mode == 0x11 and subfn == 0x01:
+                    print('ECU RESET')
+                    # send reset request
+                    self.reset()
 
-                # Success
-                self.send(0x7E8, [0x02, 0x51, 0x01])
-                #                 len,  ok,   subfn
-                pass 
+                    # Success
+                    self.send(0x7E8, [0x02, 0x51, 0x01])
+                    #                 len,  ok,   subfn
+                    pass 
 
             # Show stored Diagnostic Trouble Codes
             elif mode == 0x03:
