@@ -17,7 +17,7 @@ parser.add_argument('--overflow_off', action='store_true', help='overflow error 
 parser.add_argument('--vehicle_off', action='store_true', help='speed, rpm signal off')
 parser.add_argument('--heartbit_off', action='store_true', help='periodic heart bit signal off')
 parser.add_argument('--dtc_off', action='store_true', help='dtc signal handler off')
-parser.add_argument('--periodic_error_on', action='store_true', help='some error will be raised with signal(ID: 0x700)')
+parser.add_argument('--periodic_error_off', action='store_true', help='some error will be raised with signal(ID: 0x700)')
 opt = parser.parse_args()
 
 def main():
@@ -38,8 +38,8 @@ def main():
     if not opt.overflow_off:
         e.register_task(task.Task_Overflow_Checker(), [], 0.01)
     
-    if opt.periodic_error_on:
-        e.register_task(task.Task_Periodic_Error(), [], 0.01)
+    if not opt.periodic_error_off:
+        e.register_task(task.Task_Periodic_Error(), [], 0.1)
 
     e.start() 
 

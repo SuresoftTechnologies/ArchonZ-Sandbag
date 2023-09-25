@@ -1,16 +1,12 @@
 altgraph==0.17.3
 msgpack==1.0.5
-obd==0.7.1
 packaging==23.1
 pefile==2023.2.7
-Pint==0.20.1
 pyinstaller==5.13.2
 pyinstaller-hooks-contrib==2023.8
 pyserial==3.5
 python-can==4.2.1
-python-can-remote==0.2.1
 python-lin==0.1.1
-python-simva-can==0.1
 python-uds==1.0.2
 pywin32==306
 pywin32-ctypes==0.2.2
