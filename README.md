@@ -13,6 +13,24 @@ CAN Message 에 따라 DTC 에 문제를 보고하기도 하고, 동작이 제�
 python -m can_remote --interface=virtual --channel=0 --bitrate=500000
 ```
 
+### SimVA CAN
+
+SimVA 용 CANBus 를 python-can 의 확장요소로 다운로드 받아야 합니다. 
+```
+pip install git+https://github.com/minhyuk/simva-can.git
+```
+
+SimVA 와 연동 요소의 방해를 없애기 위해 기본적으로 설정된 가상 신호들을 모두 Off 합니다.
+```
+python main.py --overflow_off --vehicle_off --dtc_off --periodic_error_off --heartbit_off
+```
+
+SimVA 에서 설정한 송/수신 채널을 CAN Remote 로 Redirect 하는 유틸리티를 실행합니다.
+이제 CAN Remote 에서 SimVA 의 송수신을 확인할 수 있습니다. 여기에 퍼징도 가능합니다.
+```
+python simva_redirect.py --channel [no]
+```
+
 ### Run CAN Tasks
 
 ```
