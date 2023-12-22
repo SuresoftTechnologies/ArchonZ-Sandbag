@@ -31,10 +31,41 @@ SimVA 에서 설정한 송/수신 채널을 CAN Remote 로 Redirect 하는 유�
 python simva_redirect.py --channel [no]
 ```
 
-### Run CAN Tasks
+### Run CAN Tasks & SOME/IP Server & DoIP Server
 
 ```
 python main.py
+```
+
+### DoIP Server Virtual ECU Configuration
+
+DoIP Server를 참고한 오픈소스는 다음과 같습니다:
+https://gitlab.com/rohfle/doip-simulator
+
+가상 ECU의 설정 정보는 다음과 같습니다.
+
+- VIN = TESTVIN0000012345
+- EID = 12-34-56-78-9A-BC
+- Logical Address = [ 0x3300, 0x3301 ]
+
+```
+config = {
+    'vin': 'TESTVIN0000012345',
+    'mac': int('123456789ABC', 16),
+    'addresses': {
+        'discovery': 0x3000,
+        'server': 0x3010,
+    },
+    'datamap': {
+        0x3300: {
+            0x3200: ('Dummy Accelerator', framp(0xff, 2, 0), accelerator_format),
+            0x3230: ('Dummy Brake', framp(0x5000, 10, 0), brakehydralic_format),
+        },
+        0x3301: {
+            0x3250: ('Dummy Steering', fsine(0x7fff, 4, 0), steeringangle_format),
+        }
+    }
+}
 ```
 
 ## Trouble shooting

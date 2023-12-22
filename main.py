@@ -65,15 +65,22 @@ def remote_server():
 def vsomeip_service():
     services.run_service('127.0.0.1', '224.255.226.233', 30509)
 
+def doip_service():
+    services.run_doip()
+
 
 if __name__ == "__main__":
     p1 = multiprocessing.Process(target=remote_server)
     p2 = multiprocessing.Process(target=main)
     p3 = multiprocessing.Process(target=vsomeip_service)
+    p4 = multiprocessing.Process(target=doip_service)
+
     p1.start()
     p2.start()
     p3.start()
+    p4.start()
 
     p1.join()
     p2.join()
     p3.join()
+    p4.join()
