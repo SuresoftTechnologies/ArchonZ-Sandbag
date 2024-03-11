@@ -16,3 +16,4 @@ typing_extensions==4.6.3
 wrapt==1.15.0
 someip==0.3.0
 python-simva-can @ git+https://github.com/minhyuk/simva-can.git
+importlib-metadata==7.0.1
