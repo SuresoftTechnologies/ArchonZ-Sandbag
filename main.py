@@ -16,6 +16,8 @@ parser = argparse.ArgumentParser("sandbag", "for emulator for virtual can bus vi
 parser.add_argument('--overflow_off', action='store_true', help='overflow error signal off')
 parser.add_argument('--vehicle_off', action='store_true', help='speed, rpm signal off')
 parser.add_argument('--heartbit_off', action='store_true', help='periodic heart bit signal off')
+parser.add_argument('--uds_heartbit_off', action='store_true', help='periodic uds heartbeat signal off')
+parser.add_argument('--j1939_heartbit_off', action='store_true', help='periodic j1939 heartbeat signal off')
 parser.add_argument('--dtc_off', action='store_true', help='dtc signal handler off')
 parser.add_argument('--periodic_error_off', action='store_true', help='some error will be raised with signal(ID: 0x700)')
 opt = parser.parse_args()
@@ -35,6 +37,10 @@ def main():
     
     if not opt.heartbit_off:
         e.register_task(task.Task_HeartBit(), [], 1)
+    if not opt.uds_heartbit_off:
+        e.register_task(task.Task_Uds_HeartBit(), [], 0.5)
+    if not opt.j1939_heartbit_off:
+        e.register_task(task.Task_J1939_HeartBit(), [], 0.5)
 
     if not opt.overflow_off:
         e.register_task(task.Task_Overflow_Checker(), [], 0.01)
