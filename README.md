@@ -7,11 +7,32 @@ Archon 에서 사용할 수 있는 테스트 환경 모음입니다.
 웹소켓으로 구성된 가상의 CAN Bus 에 대해 동작하는 다양한 가상의 태스크들을 설정하고 동작하는 구성입니다.
 CAN Message 에 따라 DTC 에 문제를 보고하기도 하고, 동작이 제한되는등의 Fault 를 임의로 삽입하여 테스트 구성을 하기 위한 목적입니다.
 
+
 ### Remote CAN Bus
 
 ```
 python -m can_remote --interface=virtual --channel=0 --bitrate=500000
 ```
+
+### UDS Demo with CVE-2024-51073
+데모 시나리오:
+1. 특정 uds 서비스의 특정 데이터가 송신됨  
+(AV= TestCommunicationControl.Request.SendCommunicationControl.Size.ScalarVariance.9)
+2. sandbag 의 모든 can 관련 task 가 정지하면서 메시지가 송신되지 않음
+3. weakness 가 잡힘 (critical)
+4. connection test 로 sandbag 의 정지된 task 를 재개할 수 있음
+
+sandbag 실행 시, can_demo_on 옵션을 통해 데모 시나리오를 수행할 수 있음
+```
+python main.py --can_demo_on [option]
+
+option list and default value:
+--stop_id       : 0x7c6
+--stop_payload  : "09 28 00 00 AA AA AA AA" 
+--resume_id     : 0x7c6
+--resume_payload: "01 10 00 AA AA AA AA AA"
+```
+(ref. https://github.com/nitinronge91/KIA-SELTOS-Cluster-Vulnerabilities/blob/3755e3f692dce5b1ab06de2d04a2433c907ab21c/CVE/Control%20CAN%20communication%20for%20KIA%20SELTOS%20Cluster%20CVE-2024-51073.md) 
 
 ### SimVA CAN
 
