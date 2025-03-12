@@ -18,6 +18,7 @@ class Task_J1939_HeartBit(engine.Task):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self._socket = CANSocket(bustype='remote', channel='ws://localhost:54701', bitrate=50000)
         # self._uds = uds.Uds(reqId=0x7E0, resId=0x7E8, transportProtocol="CAN", interface='remote', channel='ws://localhost:54701', bitrate=50000, receive_own_messages=True)
+        self._name = "j1939_heartbit"
 
     @override
     def on_message_received(self, msg: Message):

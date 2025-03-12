@@ -11,6 +11,7 @@ class Task_Throttle_Control(engine.Task):
         self._speed = 0
         self._rpm = 0
         self._init = False
+        self._name = "throttle_control"
 
     @override
     def run(self, bus: Bus):

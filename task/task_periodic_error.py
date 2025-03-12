@@ -7,6 +7,7 @@ import engine
 class Task_Periodic_Error(engine.Task):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.recv_count = 0;
+        self._name = "periodic_error"
         pass 
 
     @override

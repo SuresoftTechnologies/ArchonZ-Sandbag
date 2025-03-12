@@ -11,6 +11,7 @@ class Task_Diagnostic_Control(engine.Task):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.service_ids = [1,2,3,4,6,7]
+        self._name = "diagnostic_control"
 
     @override
     def run(self, bus: Bus):

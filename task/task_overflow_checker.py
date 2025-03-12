@@ -8,6 +8,7 @@ class Task_Overflow_Checker(engine.Task):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self._OVERFLOW = False
         self.length = {}
+        self._name = "overflow_checker"
         pass 
 
     @override
