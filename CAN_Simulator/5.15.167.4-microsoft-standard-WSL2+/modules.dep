@@ -1,0 +1,22 @@
+kernel/drivers/block/nbd.ko:
+kernel/drivers/net/bonding/bonding.ko:
+kernel/drivers/net/dummy.ko:
+kernel/drivers/net/vrf.ko:
+kernel/drivers/net/can/dev/can-dev.ko:
+kernel/drivers/net/can/vcan.ko:
+kernel/drivers/net/can/slcan.ko:
+kernel/drivers/net/can/peak_canfd/peak_pciefd.ko: kernel/drivers/net/can/dev/can-dev.ko
+kernel/drivers/usb/serial/usbserial.ko:
+kernel/drivers/usb/serial/ch341.ko: kernel/drivers/usb/serial/usbserial.ko
+kernel/drivers/usb/serial/cp210x.ko: kernel/drivers/usb/serial/usbserial.ko
+kernel/drivers/usb/serial/ftdi_sio.ko: kernel/drivers/usb/serial/usbserial.ko
+kernel/net/netfilter/xt_CT.ko:
+kernel/net/netfilter/xt_bpf.ko:
+kernel/net/netfilter/xt_u32.ko:
+kernel/net/ipv4/ipip.ko: kernel/net/ipv4/tunnel4.ko
+kernel/net/ipv4/tunnel4.ko:
+kernel/net/ipv6/sit.ko: kernel/net/ipv4/tunnel4.ko
+kernel/net/can/can.ko:
+kernel/net/can/can-raw.ko: kernel/net/can/can.ko
+kernel/net/can/can-bcm.ko: kernel/net/can/can.ko
+kernel/net/can/can-gw.ko: kernel/net/can/can.ko
