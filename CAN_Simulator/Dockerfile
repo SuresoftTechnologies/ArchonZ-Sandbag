@@ -16,7 +16,8 @@ RUN apt-get update && apt-get install -y \
     net-tools \
     iproute2 \
     python3 \
-    python3-pip
+    python3-pip \
+    kmod
 
 # 정확한 버전의 Python 패키지 설치
 RUN pip3 install msgpack==1.0.8 \
@@ -90,14 +91,23 @@ RUN echo '#!/bin/bash\n\
 PORT=${CAN_PORT:-54701}\n\
 BITRATE=${CAN_BITRATE:-500000}\n\
 \n\
+echo "virtual can 모듈 상태 확인"\n\
+if ! lsmod | grep -wq "can" || ! lsmod | grep -wq "can_raw" || ! lsmod | grep -wq "vcan"; then\n\
+    echo "필수 CAN 모듈(can, can_raw, vcan)이 하나 이상 없습니다. 종료합니다."\n\
+    exit 1\n\
+fi\n\
+echo "모듈 상태 확인 완료"\n\
+\n\
 echo "CAN 서버를 포트 $PORT, bitrate $BITRATE으로 시작합니다."\n\
 \n\
-ip link add dev vcan0 type vcan || echo "vcan0 인터페이스가 이미 존재할 수 있습니다."\n\
+ip link add dev vcan0 type vcan\n\
 ip link set up vcan0\n\
 echo "Virtual CAN 인터페이스(vcan0)가 설정되었습니다."\n\
 echo "인터페이스 상태:"\n\
-ip link show vcan0\n\
-\n\
+if ! ip link show vcan0; then\n\
+    echo "vcan0 인터페이스가 설정되지 않았습니다. 종료합니다."\n\
+    exit 1\n\
+fi\n\
 # Remote CAN 서버 백그라운드로 시작\n\
 python3 -m can_remote -i socketcan -c vcan0 -p $PORT -b $BITRATE -vv &\n\
 REMOTE_PID=$!\n\
@@ -114,7 +124,6 @@ echo "ICSim 시뮬레이터가 시작되었습니다.(PID: $ICSIM_PID)"\n\
 CONTROLS_PID=$!\n\
 echo "ICSim 컨트롤러가 시작되었습니다.(PID: $CONTROLS_PID)"\n\
 \n\
-echo "================================================="\n\
 echo "모든 서비스가 시작되었습니다."\n\
 echo "ICSim 시뮬레이터와 컨트롤러가 실행 중입니다."\n\
 echo "================================================="\n\
@@ -139,7 +148,7 @@ while true; do\n\
     # controller 제외 주요 프로세스 상태 확인\n\
     if ! ps -p $REMOTE_PID > /dev/null || ! ps -p $ICSIM_PID > /dev/null; then\n\
         echo "일부 프로세스가 종료되었습니다. 컨테이너를 종료합니다."\n\
-        echo "x11 서버가 켜져있는지 확인해주세요."\n\
+        echo "x11 서버와 ICSim 시뮬레이터가 켜져있는지 확인해주세요."\n\
         exit 1\n\
     fi\n\
 done\n\

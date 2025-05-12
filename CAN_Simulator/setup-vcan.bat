@@ -70,19 +70,22 @@ wsl -d %WSL_DISTRO% -e sudo modprobe can
 wsl -d %WSL_DISTRO% -e sudo modprobe vcan
 wsl -d %WSL_DISTRO% -e sudo modprobe can_raw
 
-REM Virtual CAN 인터페이스 생성
-echo Creating vcan0 interface...
-wsl -d %WSL_DISTRO% -e sudo ip link add dev vcan0 type vcan
-wsl -d %WSL_DISTRO% -e sudo ip link set up vcan0
+REM 모듈 확인 실행
+echo Checking loaded modules...
+wsl -d %WSL_DISTRO% -e bash -c "lsmod | grep -wq 'can'" || goto :module_missing
+wsl -d %WSL_DISTRO% -e bash -c "lsmod | grep -wq 'can_raw'" || goto :module_missing
+wsl -d %WSL_DISTRO% -e bash -c "lsmod | grep -wq 'vcan'" || goto :module_missing
 
-REM net-tools 설치 (ifconfig 사용을 위해)
-echo Installing net-tools for ifconfig...
-wsl -d %WSL_DISTRO% -e sudo apt-get install -y net-tools
+echo All required modules are loaded. Continuing...
+goto :continue
 
-REM 인터페이스 확인 (ifconfig 명령을 전체 경로로 지정)
-echo Checking vcan0 interface...
-wsl -d %WSL_DISTRO% -e bash -c "/sbin/ifconfig vcan0"
+:module_missing
 
+echo ERROR: One or more required CAN modules (can, can_raw, vcan) are missing.
+pause
+exit /b 1
+
+:continue
 REM NOPASSWD 설정 복원 (보안을 위해)
 echo Restoring sudo security...
 wsl -d %WSL_DISTRO% -e sudo bash -c "sudo sed -i '/%%sudo ALL=(ALL) NOPASSWD: ALL/d' /etc/sudoers"

@@ -23,20 +23,21 @@ Windows 환경에서 WSL2와 Docker를 활용하여 Virtual CAN 인터페이스�
 **0. 이전 설정을 초기화합니다 (필요한 경우만)**
 
     a. wsl --unregister [배포판이름] (예: Ubuntu 또는 Ubuntu-22.04)
-    
+
     b. Windows 프로그램 추가/제거에서 Ubuntu 선택 > 고급 옵션 > 초기화
-    
+
     c. wsl --list --online 으로 설치할 배포판 이름 확인
-    
+
     d. wsl --install -d [배포판이름]으로 재설치
 
 **1. `setup-vcan.bat` 실행**
 
 배치 파일은 다음 작업을 수행합니다:
-* WSL에 모듈 설치
-* .wslconfig 파일 설정
-* WSL 재실행
-* 필요한 CAN 모듈 로드 및 vcan0 인터페이스 생성
+
+- WSL에 모듈 설치
+- .wslconfig 파일 설정
+- WSL 재실행
+- 필요한 CAN 모듈 로드
 
 **2. Docker 이미지 빌드 및 컨테이너 실행:**
 
@@ -46,7 +47,7 @@ docker run [옵션] [이미지이름]
 
 # 예시
 docker build -t can-simulator .
-docker run --privileged -p 54701:54701 --log-opt max-size=10m --log-opt max-file=3 --name=icsim_container can-simulator
+docker run --cap-add=NET_ADMIN -p 54701:54701 --log-opt max-size=10m --log-opt max-file=3 --name=icsim_container can-simulator
 ```
 
 컨테이너가 실행되면 Controller와 Simulator GUI가 자동으로 시작됩니다.
@@ -55,11 +56,11 @@ docker run --privileged -p 54701:54701 --log-opt max-size=10m --log-opt max-file
 
 ### 도커 컨테이너 실행 시 주요 옵션 설명
 
-* `--privileged`: Virtual CAN 인터페이스 생성 및 설정에 필요한 권한 부여
-* `-p port1:port2`: 포트 매핑 (port1: 호스트 시스템 포트, port2: 컨테이너 내부 포트)
-* `--name`: 컨테이너 이름 지정 (선택 사항)
-* `-e CAN_PORT=port -e CAN_BITRATE=bitrate`: CAN 포트와 비트레이트 설정 (기본값: 54701, 500000)
-* `--log-opt`: 로그 로테이션 설정
+- `--cap-add=NET_ADMIN`: Virtual CAN 인터페이스 생성 및 설정에 필요한 권한 부여
+- `-p port1:port2`: 포트 매핑 (port1: 호스트 시스템 포트, port2: 컨테이너 내부 포트)
+- `--name`: 컨테이너 이름 지정 (선택 사항)
+- `-e CAN_PORT=port -e CAN_BITRATE=bitrate`: CAN 포트와 비트레이트 설정 (기본값: 54701, 500000)
+- `--log-opt`: 로그 로테이션 설정
 
 📢 **중요**: `CAN_PORT` 환경변수는 `-p` 옵션의 두 번째 숫자와 동일해야 합니다.
 
