@@ -90,6 +90,7 @@ RUN echo '#!/bin/bash\n\
 # 환경 변수에서 값을 읽거나 기본값 사용\n\
 PORT=${CAN_PORT:-54701}\n\
 BITRATE=${CAN_BITRATE:-500000}\n\
+LOGGING=${CAN_LOGGING:-false}\n\
 \n\
 echo "virtual can 모듈 상태 확인"\n\
 if ! lsmod | grep -wq "can" || ! lsmod | grep -wq "can_raw" || ! lsmod | grep -wq "vcan"; then\n\
@@ -98,7 +99,7 @@ if ! lsmod | grep -wq "can" || ! lsmod | grep -wq "can_raw" || ! lsmod | grep -w
 fi\n\
 echo "모듈 상태 확인 완료"\n\
 \n\
-echo "CAN 서버를 포트 $PORT, bitrate $BITRATE으로 시작합니다."\n\
+echo "CAN 서버를 포트 $PORT, bitrate $BITRATE, logging mode $LOGGING로 시작합니다."\n\
 \n\
 ip link add dev vcan0 type vcan\n\
 ip link set up vcan0\n\
@@ -109,7 +110,14 @@ if ! ip link show vcan0; then\n\
     exit 1\n\
 fi\n\
 # Remote CAN 서버 백그라운드로 시작\n\
-python3 -m can_remote -i socketcan -c vcan0 -p $PORT -b $BITRATE -vv &\n\
+# logging이 true일 경우 -vv를 붙여서 실행, false일 경우 -v를 아예 붙이지 않음\n\
+if [ "$LOGGING" = true ]; then\n\
+    echo "Remote CAN 서버를 로깅 모드로 시작합니다."\n\
+    python3 -m can_remote -i socketcan -c vcan0 -p $PORT -b $BITRATE -vv &\n\
+else\n\
+    echo "Remote CAN 서버를 일반 모드로 시작합니다."\n\
+    python3 -m can_remote -i socketcan -c vcan0 -p $PORT -b $BITRATE &\n\
+fi\n\
 REMOTE_PID=$!\n\
 echo "Remote CAN 서버가 시작되었습니다.(PID: $REMOTE_PID, 포트: $PORT, Bitrate: $BITRATE)"\n\
 \n\
