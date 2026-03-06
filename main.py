@@ -1,16 +1,58 @@
 # system
+import sys
 import time
+import logging
 import multiprocessing
 import argparse
 
 # 3rdparty
+import warning_filters
+warning_filters.suppress_pkg_resources_deprecation_warning()
 import can
 import can_remote
+from can_remote.server import RemoteServer, ClientRequestHandler
 
 # ours
 import engine
 import task
 import services
+
+logger = logging.getLogger(__name__)
+
+_CONN_ERRORS = (
+    BrokenPipeError,
+    ConnectionResetError,
+    ConnectionAbortedError,
+    OSError,
+)
+
+
+class RobustClientRequestHandler(ClientRequestHandler):
+    """Fuzzing-safe request handler that silently drops malformed packets."""
+
+    def handle(self):
+        try:
+            super().handle()
+        except _CONN_ERRORS:
+            pass
+
+    def log_message(self, format, *args):
+        logger.debug(format, *args)
+
+
+class RobustRemoteServer(RemoteServer):
+    """RemoteServer subclass that tolerates malformed / fuzzing traffic."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.RequestHandlerClass = RobustClientRequestHandler
+
+    def handle_error(self, request, client_address):
+        exc_type = sys.exc_info()[0]
+        if exc_type and issubclass(exc_type, _CONN_ERRORS):
+            logger.debug("Ignored connection error from %s", client_address)
+        else:
+            super().handle_error(request, client_address)
 
 parser = argparse.ArgumentParser("sandbag", "for emulator for virtual can bus via websocket")
 parser.add_argument('--overflow_off', action='store_true', help='overflow error signal off')
@@ -29,6 +71,12 @@ parser.add_argument('--stop_payload', type=str, default='09 28 00 00 AA AA AA AA
 parser.add_argument('--resume_id', type=str, default='0x7c6', help='CAN ID for resume command (hex format)')
 parser.add_argument('--resume_payload', type=str, default='01 10 00 AA AA AA AA AA', help='payload for resume command (space separated hex bytes)')
 
+parser.add_argument('--uds_echo_on', action='store_true', help='UDS echo responder on')
+parser.add_argument('--uds_echo_silent', action='store_true', help='UDS echo silent mode (no Default Session response)')
+parser.add_argument('--unknown_ff_on', action='store_true', help='unknown ECU First Frame sender on')
+parser.add_argument('--response_id', type=str, default='0x7E8', help='UDS response arbitration ID (hex format)')
+parser.add_argument('--vin', type=str, default='WAUZZZ8V9FA149850', help='VIN string for UDS echo (17 chars)')
+
 opt = parser.parse_args()
 
 
@@ -36,7 +84,7 @@ def main():
     time.sleep(1)   # for server on
     print('Sandbag Started')
     
-    bus = can.Bus(interface='remote', channel='ws://localhost:54701', bitrate=50000, receive_own_messages=True)
+    bus = can.Bus(interface='remote', channel='ws://localhost:54701', bitrate=500000, receive_own_messages=True)
     e = engine.Engine(bus)
     
     if not opt.vehicle_off:
@@ -56,6 +104,14 @@ def main():
     
     if not opt.periodic_error_off:
         e.register_task(task.Task_Periodic_Error(), [], 0.1)
+
+    if opt.uds_echo_on:
+        resp_id = int(opt.response_id, 16)
+        # 0x7EE Archon; 0x7DF/0x7E0 OBD; 0x7FF 요청. 0xEEE 제외(Throttle 전송→ISO-TP 노이즈)
+        req_ids = [0x7DF, 0x7E0, 0x7EE, 0x7FF]
+        e.register_task(task.Task_UDS_Echo(resp_id, silent_mode=opt.uds_echo_silent, vin=opt.vin, request_ids=req_ids), [], 1)
+    if opt.unknown_ff_on:
+        e.register_task(task.Task_Unknown_FF(), [], 5.0)
 
     if opt.can_demo_on:
         stop_id = int(opt.stop_id, 16)
@@ -79,7 +135,7 @@ def remote_server():
     config["bustype"] = 'virtual'
     config["bitrate"] = 500000
 
-    server = can_remote.RemoteServer('0.0.0.0', 54701, **config)
+    server = RobustRemoteServer('0.0.0.0', 54701, **config)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

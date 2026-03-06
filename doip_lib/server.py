@@ -132,7 +132,7 @@ class DOIPServer:
                             await self.start_tcp_server()
                         except Exception as e:
                             logger.error(f"Unexcepted Error: {e}")
-                    logger.debug(f"Message received from {client_addr} : {request}")
+                    logger.debug(f"Message received from {client_addr} : {data.hex()}")
                     
                 else:
                     request, used = doip.parse(data)
@@ -199,10 +199,15 @@ class DOIPServer:
             logger.error(f'Invalid Message is received - {err}')
         except doip.MessageTypeNotSupported as err:
             logger.error(f'Message Type Not Supported - {err}')
+        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, OSError) as err:
+            logger.debug(f'Connection error in session with {client_addr}: {err}')
         except Exception as err:
-            logger.error(f'Error in session with {client_addr}')
+            logger.error(f'Error in session with {client_addr}: {err}')
         finally:
-            writer.close()
+            try:
+                writer.close()
+            except Exception:
+                pass
 
     async def restart_tcp_server(self):
         if self.tcp_server:
@@ -258,5 +263,6 @@ class EchoUDPProtocol(asyncio.DatagramProtocol):
         self.transport = transport
 
     def datagram_received(self, data, addr):
+        print(f"UDP received {len(data)} bytes from {addr}: {data.hex()}")
         if self.on_con_message:
             asyncio.create_task(self.on_con_message(data))

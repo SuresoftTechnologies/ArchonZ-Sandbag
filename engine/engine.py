@@ -88,7 +88,7 @@ class Engine:
         if bus is not None:
             self.bus = bus
         else:
-            self.bus = Bus(interface='remote', channel='ws://localhost:54701', bitrate=50000, receive_own_messages=True)
+            self.bus = Bus(interface='remote', channel='ws://localhost:54701', bitrate=500000, receive_own_messages=True)
         self.tasks = []
         self.listeners = []
         self.stopped_tasks = []  # 중지된 태스크 추적

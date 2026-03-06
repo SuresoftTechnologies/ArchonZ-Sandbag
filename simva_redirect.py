@@ -1,4 +1,6 @@
 import time
+import warning_filters
+warning_filters.suppress_pkg_resources_deprecation_warning()
 import can
 import argparse
 
@@ -7,7 +9,7 @@ parser = argparse.ArgumentParser("SimVA to CAN Remote Bus", "It will redirect Si
 parser.add_argument('--channel', '-c', dest='channel', required=True, type=int, help='SimVA has various channel. Please specify channel number(check cfg file in simva).')
 
 def run(channel: int):
-    bus = can.Bus(interface='remote', channel='ws://localhost:54701', bitrate=50000, receive_own_messages=True)
+    bus = can.Bus(interface='remote', channel='ws://localhost:54701', bitrate=500000, receive_own_messages=True)
     simva = can.Bus(interface='simva', channel=channel)
     print('Initialize')
     while True:
