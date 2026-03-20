@@ -80,7 +80,7 @@ option list and default value:
 | 구분 | ID | 설명 |
 |---|---|---|
 | Request | `0x7DF` | OBD-II 기능 주소 (broadcast) |
-| Request | `0x7E0` | OBD-II 물리 주소 |
+| Request | `0x7E0` ~ `0x7E7` | OBD-II 물리 주소 범위 |
 | Request | `0x7EE` | Archon 전용 요청 |
 | Request | `0x7FF` | 추가 요청 ID |
 | Response | `0x7E8` | 기본 응답 ID (`--response_id` 로 변경 가능) |

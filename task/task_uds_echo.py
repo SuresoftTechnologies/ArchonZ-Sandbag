@@ -54,8 +54,10 @@ class Task_UDS_Echo(engine.Task):
         VIN 문자열 (기본 17자).
     """
 
-    # 0x7DF/0x7E0 = OBD-II; 0x7EE = Archon request; 0x7FF = 요청 ID. 0xEEE 제외(Throttle이 전송해 UDS가 아님)
-    DEFAULT_REQUEST_IDS = [0x7DF, 0x7E0, 0x7EE, 0x7FF]
+    # 0x7DF = OBD-II functional, 0x7E0~0x7E7 = OBD-II physical,
+    # 0x7EE = Archon request, 0x7FF = 추가 요청 ID.
+    # 0xEEE 제외(Throttle이 전송해 UDS가 아님)
+    DEFAULT_REQUEST_IDS = [0x7DF, *range(0x7E0, 0x7E8), 0x7EE, 0x7FF]
 
     def __init__(
         self,
@@ -148,7 +150,9 @@ class Task_UDS_Echo(engine.Task):
             return
         # data[0]=length, data[1]=SID (SF-shaped for _dispatch)
         data = [len(payload) & 0x0F] + payload
-        synthetic = Message(arbitration_id=req_id, data=bytes(data), is_extended_id=False)
+        synthetic = Message(
+            arbitration_id=req_id, data=bytes(data), is_extended_id=False
+        )
         self._dispatch(payload[0], synthetic)
 
     @override

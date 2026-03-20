@@ -7,6 +7,7 @@ import argparse
 
 # 3rdparty
 import warning_filters
+
 warning_filters.suppress_pkg_resources_deprecation_warning()
 import can
 import can_remote
@@ -54,44 +55,101 @@ class RobustRemoteServer(RemoteServer):
         else:
             super().handle_error(request, client_address)
 
-parser = argparse.ArgumentParser("sandbag", "for emulator for virtual can bus via websocket")
-parser.add_argument('--overflow_off', action='store_true', help='overflow error signal off')
-parser.add_argument('--vehicle_off', action='store_true', help='speed, rpm signal off')
-parser.add_argument('--heartbit_off', action='store_true', help='periodic heart bit signal off')
-parser.add_argument('--uds_heartbit_off', action='store_true', help='periodic uds heartbeat signal off')
-parser.add_argument('--j1939_heartbit_off', action='store_true', help='periodic j1939 heartbeat signal off')
-parser.add_argument('--dtc_off', action='store_true', help='dtc signal handler off')
-parser.add_argument('--periodic_error_off', action='store_true', help='some error will be raised with signal(ID: 0x700)')
+
+parser = argparse.ArgumentParser(
+    "sandbag", "for emulator for virtual can bus via websocket"
+)
+parser.add_argument(
+    "--overflow_off", action="store_true", help="overflow error signal off"
+)
+parser.add_argument("--vehicle_off", action="store_true", help="speed, rpm signal off")
+parser.add_argument(
+    "--heartbit_off", action="store_true", help="periodic heart bit signal off"
+)
+parser.add_argument(
+    "--uds_heartbit_off", action="store_true", help="periodic uds heartbeat signal off"
+)
+parser.add_argument(
+    "--j1939_heartbit_off",
+    action="store_true",
+    help="periodic j1939 heartbeat signal off",
+)
+parser.add_argument("--dtc_off", action="store_true", help="dtc signal handler off")
+parser.add_argument(
+    "--periodic_error_off",
+    action="store_true",
+    help="some error will be raised with signal(ID: 0x700)",
+)
 
 # 새로운 stop/resume 관련 옵션 추가
-parser.add_argument('--can_demo_on', action='store_true', help='disable stop controller task')
+parser.add_argument(
+    "--can_demo_on", action="store_true", help="disable stop controller task"
+)
 
-parser.add_argument('--stop_id', type=str, default='0x7c6', help='CAN ID for stop command (hex format)')
-parser.add_argument('--stop_payload', type=str, default='09 28 00 00 AA AA AA AA', help='payload for stop command (space separated hex bytes)')
-parser.add_argument('--resume_id', type=str, default='0x7c6', help='CAN ID for resume command (hex format)')
-parser.add_argument('--resume_payload', type=str, default='01 10 00 AA AA AA AA AA', help='payload for resume command (space separated hex bytes)')
+parser.add_argument(
+    "--stop_id", type=str, default="0x7c6", help="CAN ID for stop command (hex format)"
+)
+parser.add_argument(
+    "--stop_payload",
+    type=str,
+    default="09 28 00 00 AA AA AA AA",
+    help="payload for stop command (space separated hex bytes)",
+)
+parser.add_argument(
+    "--resume_id",
+    type=str,
+    default="0x7c6",
+    help="CAN ID for resume command (hex format)",
+)
+parser.add_argument(
+    "--resume_payload",
+    type=str,
+    default="01 10 00 AA AA AA AA AA",
+    help="payload for resume command (space separated hex bytes)",
+)
 
-parser.add_argument('--uds_echo_on', action='store_true', help='UDS echo responder on')
-parser.add_argument('--uds_echo_silent', action='store_true', help='UDS echo silent mode (no Default Session response)')
-parser.add_argument('--unknown_ff_on', action='store_true', help='unknown ECU First Frame sender on')
-parser.add_argument('--response_id', type=str, default='0x7E8', help='UDS response arbitration ID (hex format)')
-parser.add_argument('--vin', type=str, default='WAUZZZ8V9FA149850', help='VIN string for UDS echo (17 chars)')
+parser.add_argument("--uds_echo_on", action="store_true", help="UDS echo responder on")
+parser.add_argument(
+    "--uds_echo_silent",
+    action="store_true",
+    help="UDS echo silent mode (no Default Session response)",
+)
+parser.add_argument(
+    "--unknown_ff_on", action="store_true", help="unknown ECU First Frame sender on"
+)
+parser.add_argument(
+    "--response_id",
+    type=str,
+    default="0x7E8",
+    help="UDS response arbitration ID (hex format)",
+)
+parser.add_argument(
+    "--vin",
+    type=str,
+    default="WAUZZZ8V9FA149850",
+    help="VIN string for UDS echo (17 chars)",
+)
 
 opt = parser.parse_args()
 
 
 def main():
-    time.sleep(1)   # for server on
-    print('Sandbag Started')
-    
-    bus = can.Bus(interface='remote', channel='ws://localhost:54701', bitrate=500000, receive_own_messages=True)
+    time.sleep(1)  # for server on
+    print("Sandbag Started")
+
+    bus = can.Bus(
+        interface="remote",
+        channel="ws://localhost:54701",
+        bitrate=500000,
+        receive_own_messages=True,
+    )
     e = engine.Engine(bus)
-    
+
     if not opt.vehicle_off:
         e.register_task(task.Task_Throttle_Control(), [], 0.01)
     if not opt.dtc_off:
         e.register_task(task.Task_Diagnostic_Control(), [], 1)
-    
+
     if not opt.heartbit_off:
         e.register_task(task.Task_HeartBit(), [], 1)
     if not opt.uds_heartbit_off:
@@ -101,15 +159,25 @@ def main():
 
     if not opt.overflow_off:
         e.register_task(task.Task_Overflow_Checker(), [], 0.01)
-    
+
     if not opt.periodic_error_off:
         e.register_task(task.Task_Periodic_Error(), [], 0.1)
 
     if opt.uds_echo_on:
         resp_id = int(opt.response_id, 16)
-        # 0x7EE Archon; 0x7DF/0x7E0 OBD; 0x7FF 요청. 0xEEE 제외(Throttle 전송→ISO-TP 노이즈)
-        req_ids = [0x7DF, 0x7E0, 0x7EE, 0x7FF]
-        e.register_task(task.Task_UDS_Echo(resp_id, silent_mode=opt.uds_echo_silent, vin=opt.vin, request_ids=req_ids), [], 1)
+        # 0x7DF OBD functional, 0x7E0~0x7E7 OBD physical, 0x7EE Archon, 0x7FF 요청.
+        # 0xEEE 제외(Throttle 전송→ISO-TP 노이즈)
+        req_ids = [0x7DF, *range(0x7E0, 0x7E8), 0x7EE, 0x7FF]
+        e.register_task(
+            task.Task_UDS_Echo(
+                resp_id,
+                silent_mode=opt.uds_echo_silent,
+                vin=opt.vin,
+                request_ids=req_ids,
+            ),
+            [],
+            1,
+        )
     if opt.unknown_ff_on:
         e.register_task(task.Task_Unknown_FF(), [], 5.0)
 
@@ -124,28 +192,29 @@ def main():
         resume_controller = task.Task_Resume_Controller(e, resume_id, resume_payload)
         e.register_task(resume_controller, [], 0.1)
 
-    e.start() 
+    e.start()
 
 
-def remote_server():    
-    print('Server Started')
+def remote_server():
+    print("Server Started")
 
     config = {}
     config["channel"] = 0
-    config["bustype"] = 'virtual'
+    config["bustype"] = "virtual"
     config["bitrate"] = 500000
 
-    server = RobustRemoteServer('0.0.0.0', 54701, **config)
+    server = RobustRemoteServer("0.0.0.0", 54701, **config)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     server.server_close()
-    print('Server Closed')
+    print("Server Closed")
 
 
 def vsomeip_service():
-    services.run_service('127.0.0.1', '224.255.226.233', 30509)
+    services.run_service("127.0.0.1", "224.255.226.233", 30509)
+
 
 def doip_service():
     services.run_doip()
