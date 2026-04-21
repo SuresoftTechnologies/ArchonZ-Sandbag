@@ -2,6 +2,202 @@
 
 Archon 에서 사용할 수 있는 테스트 환경 모음입니다.
 
+## ISO 15118-2 on WSL2
+
+Source: https://github.com/EcoG-io/iso15118
+Snapshot commit: b256f9b379d3c0acbea24258c4a184f5264950a2
+Imported on: 2026-04-20
+Purpose: Archon test sandbox runtime snapshot
+
+`EcoG-io/iso15118` 기반의 `ISO 15118-2` 테스트 환경은 `Windows native`가 아니라
+`WSL2 전용`으로 운영합니다.
+
+- 상세 가이드: `docs/iso15118-wsl2.md`
+- bootstrap: `bash src/iso15118/tools/iso15118/setup-wsl.sh`
+- 로컬 실행: `bash src/iso15118/tools/iso15118/run-local.sh secc`
+
+현재 역할 분리는 `Sandbag = SECC`, `Archon = EVCC` 입니다.
+
+### ISO15118_REPO_DIR 환경 변수
+
+반복해서 경로를 입력하지 않으려면 아래 환경 변수를 설정합니다.
+
+```bash
+export ISO15118_REPO_DIR="/mnt/e/Project/ArchonZ-Project/ArchonZ-Sandbag/src/iso15118"
+```
+
+이후부터는 아래처럼 사용할 수 있습니다.
+
+```bash
+cd "$ISO15118_REPO_DIR"
+cd "$ISO15118_REPO_DIR/iso15118/shared/pki"
+```
+
+### ISO 15118-2 Sandbag 설치 절차
+
+아래 절차는 `Windows 11 + WSL2 Ubuntu` 기준입니다.
+목표는 Sandbag 안에서 `ISO 15118-2 SECC`를 띄우는 것입니다.
+
+1. WSL2 Ubuntu를 준비합니다.
+
+2. 대상 저장소를 현재 repo 아래 `src/iso15118`로 clone 합니다.
+
+```bash
+cd /mnt/e/Project/ArchonZ-Project/ArchonZ-Sandbag
+git clone https://github.com/EcoG-io/iso15118 src/iso15118
+```
+
+3. WSL2 안에 필수 런타임을 설치합니다.
+
+```bash
+sudo apt update
+sudo apt install -y openjdk-17-jre-headless python3-pip python3-venv make openssl
+curl -sSL https://install.python-poetry.org | python3 -
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+4. 설치 상태를 확인합니다.
+
+```bash
+java -version
+python3 --version
+poetry --version
+ip -brief address
+```
+
+`eth0` 같은 인터페이스에 `fe80::/64` 형태의 IPv6 link-local 주소가 보여야 합니다.
+
+5. `iso15118` 저장소로 이동해서 인증서를 생성합니다.
+
+```bash
+cd /mnt/e/Project/ArchonZ-Project/ArchonZ-Sandbag/src/iso15118/iso15118/shared/pki
+./create_certs.sh -v iso-2
+```
+
+6. 개발용 환경 파일을 준비합니다.
+
+```bash
+cd /mnt/e/Project/ArchonZ-Project/ArchonZ-Sandbag/src/iso15118
+cp .env.dev.local .env
+```
+
+기본 연결값은 아래 기준으로 시작합니다.
+
+- `NETWORK_INTERFACE=eth0`
+- `SECC_ENFORCE_TLS=False`
+- `EVCC_CONFIG_PATH=iso15118/shared/examples/evcc/iso15118_2/evcc_config_eim_ac.json`
+
+7. Python 의존성을 설치합니다.
+
+```bash
+cd /mnt/e/Project/ArchonZ-Project/ArchonZ-Sandbag/src/iso15118
+poetry install
+```
+
+8. Sandbag 서버만 띄우려면 `SECC-only` 로 로컬 실행합니다.
+
+```bash
+bash tools/iso15118/run-local.sh secc
+```
+
+Archon이 외부 EVCC 역할을 수행할 예정이면 이 경로가 기본입니다.
+`run-local.sh` 는 내부에서 `poetry install` 후 `poetry run python iso15118/secc/main.py` 를 실행합니다.
+
+9. EVCC 도 같은 저장소 안에서 같이 검증하려면 아래를 사용합니다.
+
+```bash
+bash tools/iso15118/run-local.sh evcc
+```
+
+추가 설명은 `docs/iso15118-wsl2.md`를 참고하면 됩니다.
+
+### Archon 연동 시 통신 환경 확인 절차
+
+Archon 과 Target(SECC) 를 직접 이더넷으로 연결했는데 `SDPRequest received` 로그가 찍히지 않으면,
+애플리케이션보다 먼저 `Windows host -> WSL` 경계에서 패킷이 끊기는지 확인해야 합니다.
+
+1. SECC 는 Docker가 아니라 WSL 로컬 프로세스로 실행합니다.
+
+
+[wsl2]
+networkingMode=mirrored
+
+변경 후:
+
+wsl --shutdown
+
+3. WSL 안에서 실제 연결 인터페이스를 확인합니다.
+
+ip --brief address
+
+실제 연결 NIC 가 eth0 가 아닐 수 있습니다.
+예를 들어 다음처럼 eth2 가 실제 Archon 연결 인터페이스일 수 있습니다.
+
+eth2 UP 169.254.97.218/16 fe80::39b3:ed8:8788:bc56/64
+eth3 UP 192.168.104.222/24 fe80::7f6:9023:2833:456a/64
+
+이 경우 .env 의 NETWORK_INTERFACE 값을 eth2 로 수정해야 합니다.
+
+NETWORK_INTERFACE=eth2
+
+4. Windows 에서 패킷이 보이는데 WSL 에서 안 보이면 Hyper-V firewall 을 확인합니다.
+
+관리자 PowerShell:
+
+Set-NetFirewallHyperVVMSetting -Name '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' -DefaultInboundAction Allow
+wsl --shutdown
+
+5. WSL 안에서 실제로 SDP 패킷이 들어오는지 tcpdump 로 확인합니다.
+
+sudo tcpdump -ni eth2 'ip6 and udp port 15118'
+
+정상이라면 Archon connection test 시 패킷이 보여야 합니다.
+
+6. Windows Wireshark 와 WSL tcpdump 를 같이 보면서 다음을 구분합니다.
+
+- Windows NIC 에서만 보이고 WSL tcpdump 에 안 보임
+    - WSL ingress 문제
+    - mirrored mode / Hyper-V firewall / NIC 선택 문제
+- WSL tcpdump 에는 보이는데 SECC 로그에 SDPRequest received 가 안 찍힘
+    - .env 의 NETWORK_INTERFACE 값이 틀렸거나
+    - SECC 가 다른 인터페이스에 바인드됨
+- SECC 로그에 SDPRequest received 와 Sending SDPResponse 가 찍힘
+    - 그 다음은 Archon 이 SDPResponse 를 수신하고 TCP/TLS 로 넘어가는지 확인
+
+7. 초기 bring-up 은 가능하면 NO_TLS 로 먼저 성공시키고, 이후 TLS 로 확장합니다.
+
+현재 Archon 이 Secured with TLS 로 SDP 를 보내면, SDP 이후에도 TLS handshake 까지 맞아야 하므로
+디버깅 변수가 하나 더 늘어납니다.
+
+
+### Archon 연결용 SECC 제원값
+
+Archon 이 EVCC 역할로 Sandbag SECC 에 연결할 때 필요한 기본 제원값은 아래와 같습니다.
+
+- 역할 분리: Sandbag = SECC, Archon = EVCC
+- 발견 방식: IPv6 UDP multicast FF02::1, 포트 15118
+- 세션 연결: SDP 응답으로 받은 IPv6 link-local 주소와 TCP 포트로 접속
+- TCP 포트: 고정값 아님, 49152-65535 범위의 동적 포트
+- 기본 NIC: eth0
+- 기본 보안: SECC_ENFORCE_TLS=False, 즉 초기 연결은 NO_TLS
+- 권장 초기 프로토콜: ISO_15118_2
+- 권장 초기 인증 방식: EIM
+- 권장 초기 에너지 서비스: AC
+- EVSE ID: UK123E1234
+- 지원 에너지 모드: AC_THREE_PHASE_CORE, DC_EXTENDED
+
+Archon 구현 기준 최소 연결 순서는 아래와 같습니다.
+
+1. SDP Request 를 FF02::1:15118 로 전송
+2. SDP Response 에서 SECC IPv6 주소와 TCP 포트 수신
+3. 해당 주소/포트로 TCP 연결
+4. SupportedAppProtocolReq 에서 ISO_15118_2 협상
+5. SessionSetupReq
+6. ServiceDiscoveryReq
+7. PaymentServiceSelectionReq 에서 EIM 선택
+8. ChargeParameterDiscoveryReq
+
+
 ## CAN Simulation
 
 웹소켓으로 구성된 가상의 CAN Bus 에 대해 동작하는 다양한 가상의 태스크들을 설정하고 동작하는 구성입니다.
