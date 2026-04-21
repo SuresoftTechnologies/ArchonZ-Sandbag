@@ -1,0 +1,44 @@
+name: PR Python 🐍 to Switch Repo
+
+on:
+  pull_request:
+    branches:
+      - master
+
+env:
+  PYTHON_VERSION: 3.10.5
+
+jobs:
+  code-quality-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Setup the Python Environment by installing Poetry
+      uses: ./.github/actions/setup-python-build-env
+
+    - name: Create env file
+      run: |
+        cp .env.dev.local .env
+
+    - name: Install dependencies
+      run: make install-local
+
+    - name: Mypy
+      run: make mypy
+
+    - name: Black
+      run: make black
+
+    - name: Flake8
+      run: make flake8
+
+    - name: isort
+      run: make isort
+
+    - name: Tests
+      run: make test
