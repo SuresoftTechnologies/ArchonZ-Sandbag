@@ -56,6 +56,8 @@ from iso15118.shared.utils import wait_for_tasks
 
 logger = logging.getLogger(__name__)
 
+TCP_CLOSE_TIMEOUT = 2.0
+
 if TYPE_CHECKING:
     # EVCCCommunicationSession and SECCCommunicationSession are used for
     # annotation purposes only, as a type hint for the comm_session class
@@ -411,9 +413,15 @@ class V2GCommunicationSession(SessionStateMachine):
         await asyncio.sleep(3)
         try:
             self.writer.close()
-            await self.writer.wait_closed()
-        except (asyncio.TimeoutError, ConnectionResetError) as exc:
-            logger.info(str(exc))
+            await asyncio.wait_for(self.writer.wait_closed(), TCP_CLOSE_TIMEOUT)
+        except asyncio.TimeoutError:
+            logger.warning(
+                "Timed out waiting for TCP connection to close cleanly; "
+                "aborting transport"
+            )
+            self.writer.transport.abort()
+        except (ConnectionResetError, OSError) as exc:
+            logger.warning(f"Error while closing TCP connection: {exc}")
         logger.info("TCP connection closed to peer with address " f"{self.peer_name}")
 
     async def send(self, message: V2GTPMessage):
