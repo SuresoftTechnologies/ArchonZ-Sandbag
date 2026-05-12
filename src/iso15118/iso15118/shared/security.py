@@ -228,6 +228,11 @@ def get_ssl_context(server_side: bool) -> Optional[SSLContext]:
     # The OpenSSL name for ECDH curve secp256r1 is prime256v1
     ssl_context.set_ecdh_curve("prime256v1")
 
+    keylog_filename = os.environ.get("SSLKEYLOGFILE")
+    if keylog_filename and hasattr(ssl_context, "keylog_filename"):
+        ssl_context.keylog_filename = keylog_filename
+        logger.info("TLS key log enabled via SSLKEYLOGFILE")
+
     return ssl_context
 
 
