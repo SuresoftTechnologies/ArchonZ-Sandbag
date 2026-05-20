@@ -284,6 +284,7 @@ class CommunicationSessionHandler:
         self.ev_controller: EVControllerInterface = ev_controller
         self.sdp_retries_number = SDP_MAX_REQUEST_COUNTER
         self._sdp_retry_cycles = self.config.sdp_retry_cycles
+        self._auto_restart_attempts = 0
 
         # Set the selected EXI codec implementation
         EXI().set_exi_codec(codec)
@@ -409,6 +410,35 @@ class CommunicationSessionHandler:
             self.sdp_retries_number = SDP_MAX_REQUEST_COUNTER
             raise SDPFailedError(f"SDPRequest was not successful. " f"{shutdown_msg}")
 
+    async def handle_sdp_failed(self, exc: SDPFailedError):
+        if not self.config.auto_restart_on_sdp_failure:
+            logger.exception(exc)
+            return
+
+        max_attempts = self.config.auto_restart_max_attempts
+        if max_attempts and self._auto_restart_attempts >= max_attempts:
+            logger.exception(exc)
+            logger.error(
+                "EVCC automatic restart limit reached "
+                f"({self._auto_restart_attempts}/{max_attempts})."
+            )
+            return
+
+        self._auto_restart_attempts += 1
+        attempts_msg = (
+            f"{self._auto_restart_attempts}/{max_attempts}"
+            if max_attempts
+            else str(self._auto_restart_attempts)
+        )
+        logger.warning(
+            "Restarting EVCC communication setup after SDP failure "
+            f"(attempt {attempts_msg}). Reason: {exc}"
+        )
+        await asyncio.sleep(self.config.auto_restart_delay or 0)
+        self._sdp_retry_cycles = self.config.sdp_retry_cycles
+        self.sdp_retries_number = SDP_MAX_REQUEST_COUNTER
+        await self.restart_sdp(True)
+
     async def start_comm_session(self, host: IPv6Address, port: int, is_tls: bool):
         server_type = "TLS" if is_tls else "TCP"
 
@@ -479,7 +509,7 @@ class CommunicationSessionHandler:
                     await self.restart_sdp(True)
                     return
                 except SDPFailedError as exc:
-                    logger.exception(exc)
+                    await self.handle_sdp_failed(exc)
                     return  # TODO check if this is correct here
 
             logger.info(f"SDPResponse received: {sdp_response}")
@@ -529,7 +559,7 @@ class CommunicationSessionHandler:
             try:
                 await self.restart_sdp(True)
             except SDPFailedError as exc:
-                logger.exception(exc)
+                await self.handle_sdp_failed(exc)
                 return  # TODO check if this is correct here
             return
 
@@ -555,18 +585,19 @@ class CommunicationSessionHandler:
                     try:
                         await self.restart_sdp(False)
                     except SDPFailedError as exc:
-                        logger.exception(exc)
+                        await self.handle_sdp_failed(exc)
                         # TODO not sure what else to do here
                 elif isinstance(notification, StopNotification):
                     await cancel_task(self.comm_session[1])
                     del self.comm_session
                     if notification.successful:
+                        self._auto_restart_attempts = 0
                         break
                     else:
                         try:
                             await self.restart_sdp(True)
                         except SDPFailedError as exc:
-                            logger.exception(exc)
+                            await self.handle_sdp_failed(exc)
                             # TODO not sure what else to do here
                 else:
                     logger.warning(

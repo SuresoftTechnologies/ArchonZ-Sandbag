@@ -1,0 +1,15 @@
+{
+	"supportedProtocols": [
+		"ISO_15118_2"
+	],
+	"supportedEnergyServices": [
+		"AC"
+	],
+	"isCertInstallNeeded": false,
+	"useTls": false,
+	"sdpRetryCycles": 1,
+	"autoRestartOnSdpFailure": true,
+	"autoRestartDelay": 1,
+	"autoRestartMaxAttempts": 0,
+	"chargeLoopCycle": 10
+}

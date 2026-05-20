@@ -38,6 +38,12 @@ class EVCCConfig(BaseModel):
     # How often shall SDP (SECC Discovery Protocol) retries happen before reverting
     # to using nominal duty cycle PWM-based charging?
     sdp_retry_cycles: Optional[int] = Field(1, alias="sdpRetryCycles")
+    # Test/development helper: after all SDP retry cycles are exhausted, start
+    # the EVCC communication setup again without requiring a process restart.
+    auto_restart_on_sdp_failure: bool = Field(False, alias="autoRestartOnSdpFailure")
+    auto_restart_delay: Optional[float] = Field(1.0, alias="autoRestartDelay")
+    # 0 means unlimited automatic restarts.
+    auto_restart_max_attempts: Optional[int] = Field(0, alias="autoRestartMaxAttempts")
     # For ISO 15118-20 only
     # Maximum amount of contract certificates (and associated certificate chains)
     # the EV can store. That value is used in the CertificateInstallationReq.
@@ -97,6 +103,28 @@ class EVCCConfig(BaseModel):
         if value < 0:
             raise ValueError(
                 "Wrong range for sdp_retry_cycles in config file. " "Should be in [0..]"
+            )
+        return value
+
+    @validator("auto_restart_delay", pre=True, always=True)
+    def check_auto_restart_delay(cls, value):
+        if value is None:
+            return value
+        if value < 0:
+            raise ValueError(
+                "Wrong range for auto_restart_delay in config file. "
+                "Should be in [0..]"
+            )
+        return value
+
+    @validator("auto_restart_max_attempts", pre=True, always=True)
+    def check_auto_restart_max_attempts(cls, value):
+        if value is None:
+            return value
+        if value < 0:
+            raise ValueError(
+                "Wrong range for auto_restart_max_attempts in config file. "
+                "Should be in [0..]"
             )
         return value
 
