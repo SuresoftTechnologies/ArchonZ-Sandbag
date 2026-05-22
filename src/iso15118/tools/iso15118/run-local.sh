@@ -10,6 +10,7 @@ fi
 ROLE="$1"
 EVCC_CONFIG_PATH_ARG="${2:-}"
 ISO15118_REPO_DIR="${ISO15118_REPO_DIR:-$HOME/src/iso15118}"
+DEFAULT_EVCC_CONFIG_PATH="${DEFAULT_EVCC_CONFIG_PATH:-iso15118/shared/examples/evcc/iso15118_2/evcc_config_eim_ac_auto_restart.json}"
 
 if [[ ! -d "$ISO15118_REPO_DIR" ]]; then
   echo "Missing iso15118 repository: $ISO15118_REPO_DIR" >&2
@@ -32,11 +33,12 @@ case "$ROLE" in
     ;;
   evcc)
     poetry install
-    if [[ -n "$EVCC_CONFIG_PATH_ARG" ]]; then
-      poetry run python iso15118/evcc/main.py "$EVCC_CONFIG_PATH_ARG"
-    else
-      poetry run python iso15118/evcc/main.py
+    EVCC_CONFIG_PATH="${EVCC_CONFIG_PATH_ARG:-$DEFAULT_EVCC_CONFIG_PATH}"
+    if [[ ! -f "$EVCC_CONFIG_PATH" ]]; then
+      echo "Missing EVCC config: $EVCC_CONFIG_PATH" >&2
+      exit 1
     fi
+    poetry run python iso15118/evcc/main.py "$EVCC_CONFIG_PATH"
     ;;
   test)
     poetry install
