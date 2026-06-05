@@ -9,13 +9,8 @@ import argparse
 import warning_filters
 
 warning_filters.suppress_pkg_resources_deprecation_warning()
-import can
-import can_remote
-from can_remote.server import RemoteServer, ClientRequestHandler
 
 # ours
-import engine
-import task
 import services
 
 logger = logging.getLogger(__name__)
@@ -26,34 +21,6 @@ _CONN_ERRORS = (
     ConnectionAbortedError,
     OSError,
 )
-
-
-class RobustClientRequestHandler(ClientRequestHandler):
-    """Fuzzing-safe request handler that silently drops malformed packets."""
-
-    def handle(self):
-        try:
-            super().handle()
-        except _CONN_ERRORS:
-            pass
-
-    def log_message(self, format, *args):
-        logger.debug(format, *args)
-
-
-class RobustRemoteServer(RemoteServer):
-    """RemoteServer subclass that tolerates malformed / fuzzing traffic."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.RequestHandlerClass = RobustClientRequestHandler
-
-    def handle_error(self, request, client_address):
-        exc_type = sys.exc_info()[0]
-        if exc_type and issubclass(exc_type, _CONN_ERRORS):
-            logger.debug("Ignored connection error from %s", client_address)
-        else:
-            super().handle_error(request, client_address)
 
 
 parser = argparse.ArgumentParser(
@@ -129,11 +96,24 @@ parser.add_argument(
     default="WAUZZZ8V9FA149850",
     help="VIN string for UDS echo (17 chars)",
 )
+parser.add_argument("--fhir_on", action="store_true", help="FHIR HTTP sandbag on")
+parser.add_argument(
+    "--fhir_only",
+    action="store_true",
+    help="run only the FHIR HTTP sandbag without CAN/SOME-IP/DoIP services",
+)
+parser.add_argument("--fhir_host", type=str, default="0.0.0.0", help="FHIR bind host")
+parser.add_argument("--fhir_port", type=int, default=8080, help="FHIR bind port")
+parser.add_argument("--fhir_base_path", type=str, default="/fhir", help="FHIR base path")
 
 opt = parser.parse_args()
 
 
 def main():
+    import can
+    import engine
+    import task
+
     time.sleep(1)  # for server on
     print("Sandbag Started")
 
@@ -196,6 +176,34 @@ def main():
 
 
 def remote_server():
+    from can_remote.server import ClientRequestHandler, RemoteServer
+
+    class RobustClientRequestHandler(ClientRequestHandler):
+        """Fuzzing-safe request handler that silently drops malformed packets."""
+
+        def handle(self):
+            try:
+                super().handle()
+            except _CONN_ERRORS:
+                pass
+
+        def log_message(self, format, *args):
+            logger.debug(format, *args)
+
+    class RobustRemoteServer(RemoteServer):
+        """RemoteServer subclass that tolerates malformed / fuzzing traffic."""
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.RequestHandlerClass = RobustClientRequestHandler
+
+        def handle_error(self, request, client_address):
+            exc_type = sys.exc_info()[0]
+            if exc_type and issubclass(exc_type, _CONN_ERRORS):
+                logger.debug("Ignored connection error from %s", client_address)
+            else:
+                super().handle_error(request, client_address)
+
     print("Server Started")
 
     config = {}
@@ -220,18 +228,28 @@ def doip_service():
     services.run_doip()
 
 
+def fhir_service():
+    services.run_fhir(opt.fhir_host, opt.fhir_port, opt.fhir_base_path)
+
+
 if __name__ == "__main__":
     processes = []
 
-    p1 = multiprocessing.Process(target=remote_server)
-    p2 = multiprocessing.Process(target=main)
-    p3 = multiprocessing.Process(target=vsomeip_service)
-    p4 = multiprocessing.Process(target=doip_service)
+    if opt.fhir_only:
+        processes.append(multiprocessing.Process(target=fhir_service))
+    else:
+        p1 = multiprocessing.Process(target=remote_server)
+        p2 = multiprocessing.Process(target=main)
+        p3 = multiprocessing.Process(target=vsomeip_service)
+        p4 = multiprocessing.Process(target=doip_service)
 
-    processes.append(p1)
-    processes.append(p2)
-    processes.append(p3)
-    processes.append(p4)
+        processes.append(p1)
+        processes.append(p2)
+        processes.append(p3)
+        processes.append(p4)
+        if opt.fhir_on:
+            p5 = multiprocessing.Process(target=fhir_service)
+            processes.append(p5)
 
     for p in processes:
         p.start()

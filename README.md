@@ -340,6 +340,41 @@ python main.py --uds_echo_on --vehicle_off --heartbit_off
 python main.py
 ```
 
+### HL7 FHIR HTTP Sandbag Server
+
+HL7/FHIR 검증용으로 FHIR R4 기반의 가짜 병원/EMR HTTP 서버를 띄울 수 있습니다.
+
+- 역할 분리: Sandbag = FHIR Server, Archon = FHIR Client/Fuzzer
+- 기본 endpoint: `http://127.0.0.1:8080/fhir`
+- 지원 resource: `Patient`, `Observation`
+- 지원 format: `application/fhir+json`
+
+단독 실행:
+
+```
+python services\fhir_service.py --host 127.0.0.1 --port 8080 --base-path /fhir
+```
+
+`main.py` 에서 FHIR만 실행:
+
+```
+python main.py --fhir_only --fhir_host 0.0.0.0 --fhir_port 8080 --fhir_base_path /fhir
+```
+
+기존 CAN/SOME-IP/DoIP 서비스와 함께 실행:
+
+```
+python main.py --fhir_on --fhir_host 0.0.0.0 --fhir_port 8080 --fhir_base_path /fhir
+```
+
+검증:
+
+```
+python test_fhir_verify.py
+```
+
+분석/사용 문서는 `docs/hl7-fhir` 를 참고합니다.
+
 ### DoIP Server Virtual ECU Configuration
 
 DoIP Server를 참고한 오픈소스는 다음과 같습니다:
