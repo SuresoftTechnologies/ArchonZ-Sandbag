@@ -1,6 +1,6 @@
 # Archon HL7 FHIR MVP implementation plan
 
-이 문서는 Archon에서 Sandbag FHIR 서버를 실제 fuzzing target으로 붙이기 위한 1차 개발 확정안이다. 범위는 HL7 FHIR R4 REST/JSON 기준의 최소 실행 패키지이며, SMART/OAuth, TLS, XML/RDF, batch/transaction, history, terminology/profile validation은 2차로 둔다.
+이 문서는 Archon에서 Sandbag FHIR 서버를 실제 fuzzing target으로 붙이기 위한 1차 개발 확정안이다. 범위는 HL7 FHIR R4 REST/JSON 기준의 최소 실행 패키지이며, SMART/OAuth, TLS, XML/RDF, batch/transaction, history, terminology/profile validation은 후속 단계로 둔다. 2차 MVP는 별도 문서 [hapi-r4-target-mvp.md](hapi-r4-target-mvp.md)의 Local HAPI FHIR R4 backend target 검증이다.
 
 ## 1. 최종 결정
 
@@ -98,13 +98,13 @@ FHIR package는 `Agent`에 `HttpResponse` monitor를 내장한다.
 1. Sandbag FHIR server 실행:
 
 ```powershell
-python main.py --protocol fhir --host 127.0.0.1 --port 8080 --base-path /fhir
+python main.py --fhir_only --fhir_host 0.0.0.0 --fhir_port 8080 --fhir_base_path /fhir
 ```
 
 2. Sandbag 자체 검증:
 
 ```powershell
-python test_fhir_verify.py --base-url http://127.0.0.1:8080/fhir
+python test_fhir_verify.py
 ```
 
 3. Archon에서 FHIR protocol 선택:
@@ -159,8 +159,9 @@ Blocked:
 
 - `dotnet test Test\Core\ArchonCoreTest.csproj --filter FullyQualifiedName~FhirPackageTests` did not reach test execution in this workspace because the current restore/build environment cannot resolve existing repo dependencies such as `NLog`, `ZSpitz`, `IronPython`, `SharpPcap`, and `System.IO.Ports`. A prior `--no-restore` run compiled to `ArchonCoreTest.dll` but the testhost then failed on missing `NuGet.Frameworks.dll`.
 
-## 9. Deferred to 2nd phase
+## 9. Deferred beyond 1st phase
 
+- Local HAPI FHIR R4 backend target verification. See [hapi-r4-target-mvp.md](hapi-r4-target-mvp.md).
 - HTTPS/TLS, certificate policy, TLS payload capture.
 - SMART/OAuth authorization flow.
 - FHIR XML/RDF serialization.

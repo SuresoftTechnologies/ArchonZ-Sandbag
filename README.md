@@ -375,6 +375,13 @@ python test_fhir_verify.py
 
 분석/사용 문서는 `docs/hl7-fhir` 를 참고합니다.
 
+HAPI FHIR R4 backend를 2차 타겟으로 검증할 때는 `docs/hl7-fhir/hapi-r4-target-mvp.md`를 참고합니다. 외부 FHIR endpoint smoke test는 Sandbag을 자동 실행하지 않는 별도 스크립트를 사용합니다.
+
+```
+python test_fhir_target_verify.py --base-url http://127.0.0.1:8090/fhir
+python test_fhir_target_verify.py --base-url http://127.0.0.1:8090/fhir --allow-write
+```
+
 ### DoIP Server Virtual ECU Configuration
 
 DoIP Server를 참고한 오픈소스는 다음과 같습니다:
